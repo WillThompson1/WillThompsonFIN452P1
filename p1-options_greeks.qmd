@@ -113,7 +113,6 @@ port2 <- cross_join(prices, port)
 
 
 
-
 #This function will be used to calculate delta using the numerical method 
 numericaldelta <- function(price, type, K, T2M, sigma){
   step.delta = 1 
@@ -125,19 +124,57 @@ numericaldelta <- function(price, type, K, T2M, sigma){
   delta.numerical <- (p.up - p.down) / 2 * step.delta
   delta.numerical
   }
+
   
 
+numericalgamma <- function(price, type, K, T2M, sigma){
+  step.gamma = 1 
+  
+  p.down <- RTL::GBSOption(price - step.gamma, K , T2M, r , b = r - d, sigma = sigma, type = type)$price
+  p.current <- RTL::GBSOption(price, K , T2M, r , b = r - d, sigma = sigma, type = type)$price
+  p.up <-RTL::GBSOption(price + step.gamma, K , T2M, r , b = r - d, sigma = sigma, type = type)$price
+
+  gamma.numerical <- (p.up - 2 * p.current + p.down) / step.gamma ^ 2
+  gamma.numerical
+  }
+
+
+
+numericalvega <- function(price, type, K, T2M, sigma){
+  step.vega = 0.01  
+  
+  p.down <- RTL::GBSOption(price, K , T2M, r , b = r - d, sigma = sigma - step.vega, type = type)$price
+  p.current <- RTL::GBSOption(price, K , T2M, r , b = r - d, sigma = sigma, type = type)$price
+  p.up <-RTL::GBSOption(price, K , T2M, r , b = r - d, sigma = sigma + step.vega, type = type)$price
+
+  vega.numerical <- (p.up - p.down) / 2 * step.vega * 100
+  vega.numerical
+  }
+
+
+
+numericaltheta <- function(price, type, K, T2M, sigma){
+  step.theta = 1/365
+  
+  p.down <- RTL::GBSOption(price, K , T2M - step.theta, r , b = r - d, sigma = sigma, type = type)$price
+  p.current <- RTL::GBSOption(price, K , T2M, r , b = r - d, sigma = sigma, type = type)$price
+  
+  theta.numerical <- p.down - p.current
+  theta.numerical
+  }
 
 
 
 
 #Adding greeks, will replace NAs with actual values 
 port2 <- port2 %>% mutate(delta = mapply(numericaldelta, price, type, K, T2M, sigma), 
-                          gamma = NA, 
-                          vega = NA, 
-                          theta = NA)
+                          gamma = mapply(numericalgamma, price, type, K, T2M, sigma), 
+                          vega = mapply(numericalvega, price, type, K, T2M, sigma), 
+                          theta = mapply(numericaltheta, price, type, K, T2M, sigma))
 
 
+
+#Need to adjust step sizes 
 
 
 
