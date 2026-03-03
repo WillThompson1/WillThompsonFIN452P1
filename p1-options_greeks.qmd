@@ -101,16 +101,8 @@ Create plots showing each Greek vs. futures price over F ∈ [50, 100], with one
 
 ```{r q1}
 
-#For each price we need to show Delta, Gamma, Vega, Theta for each of the three positions
-
-#All prices 50-100 
-prices <- tibble(price = seq(50,100))
-
-#Cross join so we have all combinations 
-port2 <- cross_join(prices, port)
-
-
-
+#Initializing dividend as 0 
+d = 0 
 
 
 #This function will be used to calculate delta using the numerical method 
@@ -166,7 +158,38 @@ numericaltheta <- function(price, type, K, T2M, sigma){
 
 
 
-#Adding greeks, will replace NAs with actual values 
+
+
+#We will duplicate port to port3 and add the greeks to it, computing them numerically for F_0 = 73 
+port3 = port %>% mutate(
+  F_0 = F_0,
+  delta = mapply(numericaldelta, F_0, type, K, T2M, sigma),
+  gamma = mapply(numericalgamma, F_0, type, K, T2M, sigma), 
+  vega = mapply(numericalvega, F_0, type, K, T2M, sigma), 
+  theta = mapply(numericaltheta, F_0, type, K, T2M, sigma))
+
+
+
+
+
+
+
+
+#For each price we need to show Delta, Gamma, Vega, Theta for each of the three positions
+
+#All prices 50-100 
+prices <- tibble(price = seq(50,100))
+
+#Cross join so we have all combinations 
+port2 <- cross_join(prices, port)
+
+
+
+
+
+
+
+#Adding greeks
 port2 <- port2 %>% mutate(delta = mapply(numericaldelta, price, type, K, T2M, sigma), 
                           gamma = mapply(numericalgamma, price, type, K, T2M, sigma), 
                           vega = mapply(numericalvega, price, type, K, T2M, sigma), 
@@ -174,15 +197,29 @@ port2 <- port2 %>% mutate(delta = mapply(numericaldelta, price, type, K, T2M, si
 
 
 
-#Need to adjust step sizes 
+
+#Create plots showing each Greek vs Futures price over f = 50-100, with one line per position
+#Three lines for each plot, each plot will represent one of the greeks, four plots total 
+#We will express each greek as a total PL impact on the position to capture the directionality and size of the position, even though they all represent 2000 contracts 
 
 
 
 
+port2 %>% 
+  ggplot() +
+  geom_line(aes(x = price, y = delta*(n*mult), color = pos))
+  
+port2 %>% 
+  ggplot() +
+  geom_line(aes(x = price, y = gamma*(n*mult), color = pos))
 
+port2 %>% 
+  ggplot() +
+  geom_line(aes(x = price, y = vega*(n*mult), color = pos))
 
-
-
+port2 %>% 
+  ggplot() +
+  geom_line(aes(x = price, y = theta*(n*mult), color = pos))
 
 
 
