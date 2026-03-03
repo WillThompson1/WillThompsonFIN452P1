@@ -2,7 +2,7 @@
 title: "WTI Options Portfolio: Full Greek P&L Attribution"
 subtitle: "Individual Project"
 date: "`r Sys.Date()`"
-author: "Your Name"
+author: "Will Thompson"
 format:
   html:
     theme: cosmo
@@ -100,6 +100,55 @@ Create plots showing each Greek vs. futures price over F ∈ [50, 100], with one
 - What the changing Gamma means for a delta-hedger rebalancing daily as WTI moves through the $50–$100 range.
 
 ```{r q1}
+
+#For each price we need to show Delta, Gamma, Vega, Theta for each of the three positions
+
+#All prices 50-100 
+prices <- tibble(price = seq(50,100))
+
+#Cross join so we have all combinations 
+port2 <- cross_join(prices, port)
+
+
+
+
+
+
+#This function will be used to calculate delta using the numerical method 
+numericaldelta <- function(price, type, K, T2M, sigma){
+  step.delta = 1 
+  
+  p.down <- RTL::GBSOption(price - step.delta, K , T2M, r , b = r - d, sigma = sigma, type = type)$price
+  p.current <- RTL::GBSOption(price, K , T2M, r , b = r - d, sigma = sigma, type = type)$price
+  p.up <-RTL::GBSOption(price + step.delta, K , T2M, r , b = r - d, sigma = sigma, type = type)$price
+
+  delta.numerical <- (p.up - p.down) / 2 * step.delta
+  delta.numerical
+  }
+  
+
+
+
+
+
+#Adding greeks, will replace NAs with actual values 
+port2 <- port2 %>% mutate(delta = mapply(numericaldelta, price, type, K, T2M, sigma), 
+                          gamma = NA, 
+                          vega = NA, 
+                          theta = NA)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```
 
