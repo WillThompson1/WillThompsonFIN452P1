@@ -221,6 +221,53 @@ port2 %>%
   ggplot() +
   geom_line(aes(x = price, y = theta*(n*mult), color = pos))
 
+#Will need to double check if these plots look right 
+
+
+
+
+#d. Portfolio mark to market value and gamma 
+
+
+#Going to just make a gbswrapper function (like class notes) to simplify mapply implementation
+#I'll make it just return price to start but can modify later if needed
+gbswrapper <- function(price, K, T2M, r, b, sigma, type) {
+  RTL::GBSOption(price, K, T2M, r, b, sigma = sigma, type = type)$price
+}
+
+
+
+#Calculating the values for all options positions 
+port2 <- port2 %>% 
+  mutate(
+    optvalue = mapply(gbswrapper, price, K, T2M, r, b = r - d, sigma, type), 
+    posvalue = optvalue*n*mult)
+
+
+
+#Creating portfolio value combining the individual positions
+port4 <- port2 %>%
+  group_by(price) %>%
+  summarise(portvalue = sum(posvalue)) %>% 
+  ungroup()
+
+port4 %>% ggplot() +
+  geom_line(aes(x = price, y = portvalue))
+
+
+
+
+
+port5 <- port2 %>%
+  mutate(gammavalue = gamma*n*mult) %>%
+  group_by(price) %>%
+  summarise(portgamma = sum(gammavalue))
+
+port5 %>% ggplot() +
+  geom_line(aes(x = price, y = portgamma))
+
+
+
 
 
 
