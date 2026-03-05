@@ -342,8 +342,72 @@ Present all results in a `gt::gt()` table. Which position dominates the loss? Is
 
 ```{r q3}
 
+#port7 will be the three positions under new circumstances 
 
 
+port7 <- port3 %>% 
+  select(pos, type, K, T2M, sigma, n, F_0) %>%
+  mutate(T2M = T2M - 1/365, 
+         sigma = sigma + 0.2,
+         F_0 = F_0 + 17)
+
+
+port7 <- port7 %>%
+  mutate(
+    optvalue = mapply(gbswrapper, F_0, K, T2M, r, b = 0, sigma, type), 
+    posvalue = optvalue*n*mult)
+
+
+newportvalue = sum(port7$posvalue)
+
+
+
+#port8 will be the three positions under old circumstances (stolen from port2)
+port8 <- port2 %>% 
+  filter(price == 73)
+
+
+oldportvalue = sum (port8$posvalue)
+
+
+
+#Need function for Vanna 
+vannacalc <- function(price, K, T2M, r, b, sigma, type) {
+  step_s = 1
+  step_v = 0.01
+
+  #four steps we need
+  upsupv = RTL::GBSOption(price+step_s, K, T2M, r, b, sigma = sigma+step_v, type = type)$price
+  upsdownv = RTL::GBSOption(price+step_s, K, T2M, r, b, sigma = sigma-step_v, type = type)$price
+  downsupv = RTL::GBSOption(price-step_s, K, T2M, r, b, sigma = sigma+step_v, type = type)$price
+  downsdownv = RTL::GBSOption(price-step_s, K, T2M, r, b, sigma = sigma-step_v, type = type)$price
+  
+  vanna = (((upsupv)-(upsdownv)-(downsupv)+(downsdownv))/(4*step_s*step_v))
+  vanna
+  
+}
+
+
+
+
+
+
+#Add vanna to port8 
+port8 <- port8 %>%
+  mutate(vanna = mapply(vannacalc, price, K, T2M, r, b = 0, sigma, type))
+
+
+
+
+#q3results <- port8 %>%
+#  mutate(actualPL = (port7$optvalue - optvalue)*n*mult) %>%
+#  select(pos, actualPL) %>%
+#  add_row(pos = "port", actualPL = sum(q3results$actualPL, na.rm = TRUE))
+
+
+
+
+  
 
 
 
