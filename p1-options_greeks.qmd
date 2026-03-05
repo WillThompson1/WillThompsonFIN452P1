@@ -345,11 +345,15 @@ Present all results in a `gt::gt()` table. Which position dominates the loss? Is
 #port7 will be the three positions under new circumstances 
 
 
+changetime = 1/365
+changesigma = 0.2
+changef = 17
+
 port7 <- port3 %>% 
   select(pos, type, K, T2M, sigma, n, F_0) %>%
-  mutate(T2M = T2M - 1/365, 
-         sigma = sigma + 0.2,
-         F_0 = F_0 + 17)
+  mutate(T2M = T2M - changetime, 
+         sigma = sigma + changesigma,
+         F_0 = F_0 + changef)
 
 
 port7 <- port7 %>%
@@ -390,11 +394,46 @@ vannacalc <- function(price, K, T2M, r, b, sigma, type) {
 
 
 
-
-
 #Add vanna to port8 
 port8 <- port8 %>%
   mutate(vanna = mapply(vannacalc, price, K, T2M, r, b = 0, sigma, type))
+
+
+#Contributions of each greek  
+port8 <- port8 %>%
+  mutate(contdelta = delta*changef, 
+         contgamma = 0.5*gamma*changef^2, 
+         contvega = vega*changesigma,
+         contvanna = vanna*changef*changesigma,
+         conttheta = theta*changetime)
+
+
+#Attributed option value and position value (which is option value scaled to $)
+
+#This will just be the sum of each greeks contribution 
+port8 <- port8 %>%
+  mutate(atriboptvalue = rowSums(across(c(contdelta, contgamma, contvega, conttheta, contvanna))))
+
+#Then we multiply this column by n*mult to get the impact on the full position, taking into account long/short
+port8 <- port8 %>%
+  mutate(atriportvalue = atriboptvalue*n*mult)
+
+
+actualPL = newportvalue - oldportvalue
+
+atributedPL = sum(port8$atriportvalue)
+
+
+unexplainedresid = actualPL - atributedPL
+
+
+
+#Need to do the breakdown for each greek 
+#Will make a new table with just the greeks and positions then sum them up, divide them by total to get %
+
+
+
+
 
 
 
