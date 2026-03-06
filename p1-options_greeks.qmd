@@ -17,6 +17,7 @@ format:
       - "*.js"
       - "*.mp3"
 editor: source
+
 ---
 
 ```{r setup, include=FALSE}
@@ -255,7 +256,7 @@ port5 %>% ggplot() +
 
 ```
 
-We can see the mart to market of the portfolio is downward sloping across the $50-100 range. This shows the portfolio is net short as increases in stock price decrease the value of our option portfolio. In terms of delta, this means the portfolio is delta negative overall, as delta can be represented as the slope of stock price vs options value. Although the value is decreasing across the price range it is not perfectly straight, which represents the impact of gamma (change in delta) on the portfolio. 
+We can see the mark to market of the portfolio is downward sloping across the $50-100 range. This shows the portfolio is net short as increases in stock price decrease the value of our option portfolio. In terms of delta, this means the portfolio is delta negative overall, as delta can be represented as the slope of stock price vs options value. Although the value is decreasing across the price range it is not perfectly straight, which represents the impact of gamma (change in delta) on the portfolio. 
 
 Portfolio gamma is highest around \$65, which is due to the long put with a strike price of $70, as we can see on gamma v price graph, broken down by position. Gamma is most negative in the low 50s and low 80s, this is where the short put at a strike of \$55 and the short call at a strike of \$80 pull the overall portfolio gamma down the most. 
 
