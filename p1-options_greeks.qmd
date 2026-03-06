@@ -440,10 +440,38 @@ percentcont <- totalcont / totalcont$atriboptvalue
 
 
 
-#q3123 <- port8 %>%
-#  mutate(actualPL = (port7$optvalue - optvalue)*n*mult) %>%
-#  select(pos, actualPL) %>%
-#  add_row(pos = "port", actualPL = sum(q3results$actualPL, na.rm = TRUE))
+q3123 <- port8 %>%
+  mutate(actualPL = (port7$optvalue - optvalue)*n*mult,
+         attribPL = atriportvalue) %>%
+  select(pos, actualPL, attribPL) %>%
+  mutate(unexplained = actualPL - attribPL)
+
+
+
+q3123 <- q3123 %>%
+  add_row(pos = "port", 
+          actualPL = sum(q3123$actualPL, na.rm = TRUE),
+          attribPL = sum(q3123$attribPL, na.rm = TRUE),
+          unexplained = sum(q3123$actualPL, na.rm = TRUE) - sum(q3123$attribPL, na.rm = TRUE))
+
+
+q3123 <- q3123 %>%
+  rename(
+    Position = pos,
+    "Actual P&L" = actualPL,
+    "Attributed P&L" = attribPL,
+    "Unexplained" = unexplained
+    
+  )
+
+
+q3123 %>% gt() %>%
+  fmt_number(
+    columns = -Position,
+    decimals = 2,
+    use_seps = TRUE
+  )
+
 
 
 
@@ -465,6 +493,7 @@ q34 <- tibble(
     percentcont$conttheta,
     percentcont$atriboptvalue
   ))
+
 
 
 q34 %>%
@@ -490,10 +519,54 @@ Holding vol and time constant at their initial values, compute Actual P&L (full 
 ```{r q4}
 
 
+#Compute actual and attributed (Delta+Gamma only) PL for the portfolio across a range 
+
+baseq4 <- port8 %>% select(price:gamma, optvalue)
+
+pricesq4 <- tibble(shocks = seq(-20,20))
+
+#Setting up the PL df with prices ranged from -20 to +20 from the current price 
+PLq4 <- baseq4 %>%
+  crossing(pricesq4) %>%
+  mutate(newprice = price + shocks) %>%
+  relocate(newprice, 0) %>%
+  select(-price) %>%
+  arrange(newprice)
+
+
+#Actual option value at all prices
+PLq4 <- PLq4 %>% 
+  mutate(newactual = mapply(
+    gbswrapper, price = newprice, K, T2M, r, b = 0, sigma = sigma, type = type
+  ))
 
 
 
+#Computing actual and attributed PL
+PLq4 <- PLq4 %>%
+  mutate(
+    actualPL = (newactual - optvalue)*n*mult,
+    attribPL = ((delta * shocks) + (0.5 * gamma * shocks^2))*n*mult
+  )
 
+
+#For the full portfolio 
+PortPLq4 <- PLq4 %>%
+  group_by(shocks)%>%
+  summarise(
+    actualPL = sum(actualPL),
+    attribPL = sum(attribPL),
+    residual = sum(actualPL) - sum(attribPL))
+
+
+
+#Plot
+PortPLq4 %>% ggplot(aes(x = shocks)) + 
+  geom_line(aes(y = actualPL, color = "Actual")) + 
+  geom_line(aes(y = attribPL, color = "Attributed")) + 
+  geom_line(aes(y = residual, color = "Residual")) + 
+  geom_vline(xintercept = 17, linetype = "dashed") 
+  
 
 ```
 
@@ -509,4 +582,7 @@ Discuss the key learnings and insights from a Greek risk management perspective.
 
 Pay particular attention to why textbook delta-hedging assumptions break down in geopolitical gap scenarios, and what risk tools a real energy desk would use instead.
 
-*Your answer here.*
+
+
+
+
