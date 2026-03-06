@@ -110,20 +110,19 @@ b = 0
 
 #This function will be used to calculate delta using the numerical method 
 numericaldelta <- function(price, type, K, T2M, sigma){
-  step.delta = 1 
+  step.delta = 0.1 
   
   p.down <- RTL::GBSOption(price - step.delta, K , T2M, r , b = 0, sigma = sigma, type = type)$price
-  p.current <- RTL::GBSOption(price, K , T2M, r , b = 0, sigma = sigma, type = type)$price
   p.up <-RTL::GBSOption(price + step.delta, K , T2M, r , b = 0, sigma = sigma, type = type)$price
 
-  delta.numerical <- (p.up - p.down) / 2 * step.delta
+  delta.numerical <- (p.up - p.down) / (2 * step.delta)
   delta.numerical
   }
 
   
 
 numericalgamma <- function(price, type, K, T2M, sigma){
-  step.gamma = 1 
+  step.gamma = 0.1 
   
   p.down <- RTL::GBSOption(price - step.gamma, K , T2M, r , b = 0, sigma = sigma, type = type)$price
   p.current <- RTL::GBSOption(price, K , T2M, r , b = 0, sigma = sigma, type = type)$price
@@ -139,7 +138,6 @@ numericalvega <- function(price, type, K, T2M, sigma){
   step.vega = 0.01  
   
   p.down <- RTL::GBSOption(price, K , T2M, r , b = 0, sigma = sigma - step.vega, type = type)$price
-  p.current <- RTL::GBSOption(price, K , T2M, r , b = 0, sigma = sigma, type = type)$price
   p.up <-RTL::GBSOption(price, K , T2M, r , b = 0, sigma = sigma + step.vega, type = type)$price
 
   vega.numerical <- (p.up - p.down) / 2 * step.vega * 100
@@ -257,6 +255,16 @@ port5 %>% ggplot() +
 
 ```
 
+We can see the mart to market of the portfolio is downward sloping across the $50-100 range. This shows the portfolio is net short as increases in stock price decrease the value of our option portfolio. In terms of delta, this means the portfolio is delta negative overall, as delta can be represented as the slope of stock price vs options value. Although the value is decreasing across the price range it is not perfectly straight, which represents the impact of gamma (change in delta) on the portfolio. 
+
+Portfolio gamma is highest around \$65, which is due to the long put with a strike price of $70, as we can see on gamma v price graph, broken down by position. Gamma is most negative in the low 50s and low 80s, this is where the short put at a strike of \$55 and the short call at a strike of \$80 pull the overall portfolio gamma down the most. 
+
+For a delta hedger rebalancing daily, this means that the rebalancing frequency would need to be the greatest in the most negative gamma regions as that is where the delta changes faster per $ price change, and the prior delta hedges put in place will no longer be covering delta exposure. 
+
+
+
+
+
 # Question 2 (3 points)
 
 Sum Greeks across positions to show **portfolio-level Greeks** at the current market. Present in a `gt::gt()` table. At approximately what futures price does the portfolio delta change sign?
@@ -293,17 +301,51 @@ port6 <- port2 %>%
 
 #I am interpreting this as just showing the portfolio greeks at F_0 which is 73 
 #port6 has the portfolio greeks for all prices 
+
+port6 %>% 
+  gt() %>%
+  fmt_number(
+    decimals = 2,
+    use_seps = TRUE
+  ) %>%
+  cols_label(
+    price = "Price",
+    portdelta = "Delta",
+    portgamma = "Gamma",
+    portvega = "Vega",
+    porttheta = "Theta"
+  ) %>%
+  tab_header(
+    title = "Portfolio Greeks for F = 50-100"
+    )
+
 port6 %>% 
   filter(price == F_0) %>%
   gt() %>%
+  fmt_number(
+    decimals = 2,
+    use_seps = TRUE
+  ) %>%
+  cols_label(
+    price = "Price",
+    portdelta = "Delta",
+    portgamma = "Gamma",
+    portvega = "Vega",
+    porttheta = "Theta"
+  ) %>%
   tab_header(
-    title = "Portfolio Greeks",
-  )
+    title = "Portfolio Greeks at Current Market"
+    )
 
 #Have determined through changing the price range, and considering the nature of the portfolio that delta will never be positive, it is a delta negative portfolio 
 
 
 ```
+
+Through changing the price range, and considering the nature of the portfolio I don't believe that delta will ever be positive, it is a delta negative portfolio. As the price approaches 0 the delta gets higher (closer to 0) but will not be positive at any real price level.
+
+
+
 
 # Question 3 (8 points)
 
@@ -461,8 +503,7 @@ q3123 <- q3123 %>%
     "Actual P&L" = actualPL,
     "Attributed P&L" = attribPL,
     "Unexplained" = unexplained
-    
-  )
+    )
 
 
 q3123 %>% gt() %>%
@@ -506,6 +547,17 @@ q34 %>%
 
 ```
 
+Through our table we can see that P3 is the main driver for the loss by a large margin. P1 is much smaller and P2 is actually slighly positive. 
+
+
+Our attribution calculated is somewhat accurate although I don't think it should be relied upon. The position errors are very large for 1 and 2 even though they cancel each other out at the portfolio level. 
+
+This is likely because the combined spot and volatility shocks are large, so higher-order nonlinear effects beyond the included greeks are important. 
+
+
+
+
+
 # Question 4 (4 points)
 
 The Iran war scenario (ΔF = +$17) is an extreme move. How well does the Greek approximation hold as WTI moves further from the current market?
@@ -529,7 +581,7 @@ pricesq4 <- tibble(shocks = seq(-20,20))
 PLq4 <- baseq4 %>%
   crossing(pricesq4) %>%
   mutate(newprice = price + shocks) %>%
-  relocate(newprice, 0) %>%
+  relocate(newprice, .before = 1) %>%
   select(-price) %>%
   arrange(newprice)
 
@@ -566,9 +618,39 @@ PortPLq4 %>% ggplot(aes(x = shocks)) +
   geom_line(aes(y = attribPL, color = "Attributed")) + 
   geom_line(aes(y = residual, color = "Residual")) + 
   geom_vline(xintercept = 17, linetype = "dashed") 
-  
+
+
+
+#Q4 b. 
+
+
+PortPLq4 <- PortPLq4 %>%
+  filter(shocks != 0) %>%
+  mutate(resid_pct = abs(residual) / abs(actualPL)) 
+
+
+
+PortPLq4 %>%
+  filter(resid_pct > 0.05) %>%
+  arrange(abs(shocks)) %>%
+  slice(1) %>% 
+  gt() %>%
+  fmt_number(decimals = 2) 
+
+
+
+
 
 ```
+
+
+The residual first exceeds 5% of the absolute actual PL at -13% in our shocks column. 
+
+This suggests that delta gamma approximation is reasonably accurate for local or more typical price movements, but deviate more as the price shocks get more extreme. 
+
+In extreme scenarios the higher order non linearities matter more, meaning we should go for a full revaluation rather than relying on the greeks. 
+
+
 
 # Question 5 (6 points)
 
@@ -582,6 +664,18 @@ Discuss the key learnings and insights from a Greek risk management perspective.
 
 Pay particular attention to why textbook delta-hedging assumptions break down in geopolitical gap scenarios, and what risk tools a real energy desk would use instead.
 
+
+The mark-to-market profile slopes downward across our range of \$50-\$100 which indicates the portfolio is Delta negative and loses value as WTI futures rise. The curve is nonlinear due to changing Gamma across strikes. Gamma is least negative around the mid $60s where the long 70 put adds convexity, and most negative near the short option strikes. As WTI moves through those regions, Delta will change faster, requiring more frequent hedge rebalancing.
+
+The long 70 put contributes positive Gamma near its strike, while the short 55 put and short 80 call contribute negative Gamma. Because the short options dominate, the portfolio is net short Gamma across most prices, producing a concave PL profile where losses accelerate as the underlying moves further from the initial price.
+
+Position P3 generates the largest loss because the +17 price shock moves the underlying toward the short 80 call strike, causing the option value to increase rapidly. The loss is mainly driven by Delta exposure to the upward move, with negative Gamma amplifying the loss as the price change becomes larger.
+
+Vanna measures how Delta changes when volatility moves, when the underlying price and volatility both shift, an additional interaction effect appears in PL that is not captured by Delta or Vega. This interaction means some PL cannot be explained by Delta or Vega individually, making Vanna important in scenarios where both spot and volatility experience significant shocks.
+
+Greek approximations are local Taylor expansions around the current state of the market. Because of this, they work best for small moves near the point where the Greeks were calculated. In a large shock relative to expectations like the $17 move in WTI, the portfolio moves far from that point, so higher order nonlinear effects become meaningful. This leads to an increase in the difference between actual PL and the Greek attributed PL and the residual grows as shocks become larger.
+
+Delta hedging assumes continuous trading and relatively small price movements so that positions can be rebalanced frequently. During geopolitical shocks, prices can gap before hedges can be adjusted. When this occurs the hedge cannot respond in time, which leaves the portfolio exposed to risk. Because of this, trading desks would rely more on methods like stress testing and scenario analysis rather than depending on delta hedging.
 
 
 
