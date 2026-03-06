@@ -160,7 +160,6 @@ numericaltheta <- function(price, type, K, T2M, sigma){
 
 
 
-
 #We will duplicate port to port3 and add the greeks to it, computing them numerically for F_0 = 73 
 port3 = port %>% mutate(
   F_0 = F_0,
@@ -181,17 +180,11 @@ port2 <- cross_join(prices, port)
 
 
 
-
-
-
-
 #Adding greeks
 port2 <- port2 %>% mutate(delta = mapply(numericaldelta, price, type, K, T2M, sigma), 
                           gamma = mapply(numericalgamma, price, type, K, T2M, sigma), 
                           vega = mapply(numericalvega, price, type, K, T2M, sigma), 
                           theta = mapply(numericaltheta, price, type, K, T2M, sigma))
-
-
 
 
 #Create plots showing each Greek vs Futures price over f = 50-100, with one line per position
@@ -252,8 +245,6 @@ port4 %>% ggplot() +
 
 
 
-
-
 port5 <- port2 %>%
   mutate(gammavalue = gamma*n*mult) %>%
   group_by(price) %>%
@@ -271,7 +262,6 @@ port5 %>% ggplot() +
 Sum Greeks across positions to show **portfolio-level Greeks** at the current market. Present in a `gt::gt()` table. At approximately what futures price does the portfolio delta change sign?
 
 ```{r q2}
-
 
 
 #Sum greeks across positions to show portfolio level greeks 
@@ -311,8 +301,6 @@ port6 %>%
   )
 
 #Have determined through changing the price range, and considering the nature of the portfolio that delta will never be positive, it is a delta negative portfolio 
-
-
 
 
 ```
@@ -393,7 +381,6 @@ vannacalc <- function(price, K, T2M, r, b, sigma, type) {
 
 
 
-
 #Add vanna to port8 
 port8 <- port8 %>%
   mutate(vanna = mapply(vannacalc, price, K, T2M, r, b = 0, sigma, type))
@@ -431,30 +418,60 @@ unexplainedresid = actualPL - atributedPL
 #Need to do the breakdown for each greek 
 #Will make a new table with just the greeks and positions then sum them up, divide them by total to get %
 
+#Taking what we need and calculating the sum of each greek across the positions 
+#Then we will divide by total to get the attribution breakdown (4.)
+port9 <- port8 %>%
+  select(contdelta, contgamma, contvega, contvanna, conttheta, atriboptvalue) %>%
+  add_row(
+    contdelta = sum(port8$contdelta),
+    contgamma = sum(port8$contgamma),
+    contvega = sum(port8$contvega),
+    contvanna = sum(port8$contvanna),
+    conttheta = sum(port8$conttheta),
+    atriboptvalue = sum(port8$atriboptvalue)
+  ) 
+
+totalcont <- port9[4,]
+
+percentcont <- totalcont / totalcont$atriboptvalue
 
 
 
 
 
 
-
-#q3results <- port8 %>%
+#q3123 <- port8 %>%
 #  mutate(actualPL = (port7$optvalue - optvalue)*n*mult) %>%
 #  select(pos, actualPL) %>%
 #  add_row(pos = "port", actualPL = sum(q3results$actualPL, na.rm = TRUE))
 
 
 
+#Making a table to answer part 4, and presenting as gt as per instruction 
+q34 <- tibble(
+  Greek = c("Delta", "Gamma", "Vega", "Vanna", "Theta", "Total"), 
+  Contribution = c(
+    totalcont$contdelta,
+    totalcont$contgamma,
+    totalcont$contvega,
+    totalcont$contvanna,
+    totalcont$conttheta,
+    totalcont$atriboptvalue),
+  Percent = c(
+    percentcont$contdelta,
+    percentcont$contgamma,
+    percentcont$contvega,
+    percentcont$contvanna,
+    percentcont$conttheta,
+    percentcont$atriboptvalue
+  ))
 
+
+q34 %>%
+  gt() %>%
+  fmt_number(columns = Contribution, decimals = 2) %>%
+  fmt_percent(columns = Percent, decimals = 2)
   
-
-
-
-
-
-
-
-
 
 
 
